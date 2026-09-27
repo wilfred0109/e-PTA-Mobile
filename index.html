@@ -1,0 +1,688 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1B2430">
+<title>e-PTA Mobile</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root {
+  --ink: #1B2430; --ink2: #26323F; --lijn-d: #4A5A6A; --zacht-d: #C8D3DC; --kop-d: #9FB3C2;
+  --grond: #F4F2EC; --kaart: #FFFFFF; --lijn: #E4E0D6; --lijn2: #EFEBE2; --balk: #E9E5DB;
+  --tekst: #1B2430; --tekst2: #3A4652; --grijs: #5B6570; --rand: #B9B3A6;
+  --accent: #0B5E5E; --oranje: #8A4B08; --oranje-l: #FDEBD3; --teal-l: #D7ECEA;
+  box-sizing: border-box;
+}
+*, *::before, *::after { box-sizing: inherit; }
+html, body { height: 100%; margin: 0; }
+body {
+  font-family: "Segoe UI", system-ui, -apple-system, "Noto Sans", sans-serif;
+  background: var(--grond); color: var(--tekst); font-size: 16px; line-height: 1.35;
+  -webkit-tap-highlight-color: transparent;
+}
+button, input, select { font-family: inherit; font-size: 16px; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 3px solid #F5B971; outline-offset: 2px; }
+
+.app { min-height: 100%; display: flex; flex-direction: column; max-width: 720px; margin: 0 auto; }
+header {
+  background: var(--ink); color: var(--grond);
+  padding: calc(18px + env(safe-area-inset-top, 0px)) 20px 16px;
+  display: flex; flex-direction: column; gap: 14px;
+}
+.kop { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.kop .klein { font-size: 13px; color: var(--kop-d); letter-spacing: .02em; }
+.kop h1 { margin: 2px 0 0; font-size: 26px; font-weight: 700; }
+.sub { font-size: 14px; color: var(--zacht-d); }
+.rond {
+  width: 44px; height: 44px; border-radius: 22px; border: 1px solid var(--lijn-d);
+  background: transparent; color: var(--grond); display: flex; align-items: center; justify-content: center; flex: none;
+}
+.rond.draait svg { animation: draai 1s linear infinite; }
+@keyframes draai { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .rond.draait svg { animation: none; } }
+
+.tellers { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.teller { background: var(--ink2); border-radius: 12px; padding: 10px 12px; }
+.teller b { display: block; font-size: 24px; }
+.teller span { font-size: 13px; color: var(--zacht-d); }
+.teller.let b { color: #F5B971; }
+
+.kiezers { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.kiezers label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--zacht-d); }
+.kiezers select {
+  height: 44px; border-radius: 10px; border: 1px solid var(--lijn-d); background: var(--ink2); color: var(--grond);
+  padding: 0 8px; width: 100%;
+}
+
+main { flex: 1; padding: 14px 16px 110px; display: flex; flex-direction: column; gap: 12px; }
+.chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.chip {
+  height: 36px; padding: 0 16px; border-radius: 18px; border: 1px solid var(--rand); background: transparent; font-size: 14px;
+}
+.chip[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--grond); font-weight: 700; }
+
+.kaart { background: var(--kaart); border: 1px solid var(--lijn); border-radius: 14px; }
+.studie > button {
+  width: 100%; text-align: left; background: none; border: 0; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; border-radius: 14px;
+}
+.rij { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.naam { font-size: 19px; font-weight: 700; }
+.grijs { color: var(--grijs); font-size: 14px; }
+.balk { height: 8px; border-radius: 4px; background: var(--balk); overflow: hidden; }
+.balk i { display: block; height: 8px; background: var(--accent); border-radius: 4px; }
+.open { border-top: 1px solid var(--lijn2); margin: 0 16px; padding: 6px 0 8px; }
+.open h3 { margin: 8px 0 2px; font-size: 13px; font-weight: 400; color: var(--grijs); }
+.vakregel {
+  width: 100%; min-height: 44px; display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  background: none; border: 0; padding: 4px 0; text-align: left;
+}
+.code { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: 13px; color: var(--grijs); min-width: 44px; display: inline-block; }
+.pil { font-size: 13px; font-weight: 700; padding: 4px 10px; border-radius: 12px; white-space: nowrap; }
+.st-niet { background: var(--balk); color: var(--tekst2); }
+.st-sectie { background: var(--oranje-l); color: var(--oranje); }
+.st-fouten { background: var(--oranje); color: #fff; }
+.st-ingeleverd { background: var(--teal-l); color: #0A4A4A; }
+.st-gecontroleerd { background: var(--accent); color: #fff; }
+.st-magister { background: var(--ink); color: #fff; }
+.st-nvt { background: transparent; color: var(--grijs); border: 1px solid var(--rand); }
+
+.vakkop { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.vakkop h2 { margin: 0; font-size: 19px; }
+.melding { border-radius: 12px; padding: 10px 14px; font-size: 14px; }
+.melding.fout { background: var(--oranje-l); color: #6A3906; }
+.melding ul { margin: 6px 0 0; padding-left: 18px; }
+.toets > button { width: 100%; text-align: left; background: none; border: 0; padding: 10px 14px; display: flex; flex-direction: column; gap: 6px; border-radius: 12px; }
+.labels { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.lab { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 8px; background: var(--balk); }
+.lab.rand { background: transparent; border: 1px solid var(--rand); color: var(--tekst2); }
+.lab.let { background: var(--oranje); color: #fff; }
+.weging { text-align: right; font-weight: 700; color: var(--accent); font-size: 16px; line-height: 1.2; }
+.weging small { display: block; font-size: 12px; color: var(--grijs); font-weight: 400; }
+.oms { font-size: 16px; font-weight: 700; }
+.toets.vervalt .oms { text-decoration: line-through; color: var(--grijs); }
+.meer { padding: 0 14px 12px; font-size: 14px; color: var(--tekst2); display: flex; flex-direction: column; gap: 8px; }
+.meer .tekst { white-space: pre-line; }
+.meer dt { font-size: 12px; color: var(--grijs); }
+.meer dd { margin: 0; }
+
+.vak { padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.vak h2 { margin: 0; font-size: 18px; }
+.vak p { margin: 0; font-size: 14px; color: var(--tekst2); }
+.veld { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--grijs); }
+.veld input { height: 44px; border-radius: 10px; border: 1px solid var(--rand); padding: 0 10px; background: #fff; color: var(--tekst); width: 100%; }
+.knop { min-height: 44px; border-radius: 10px; border: 0; background: var(--ink); color: var(--grond); font-weight: 700; padding: 0 16px; }
+.knop.licht { background: transparent; color: var(--tekst); border: 1px solid var(--rand); font-weight: 400; }
+.knoppen { display: flex; gap: 8px; flex-wrap: wrap; }
+.url { font-family: ui-monospace, Consolas, monospace; font-size: 12px; background: var(--grond); border-radius: 8px; padding: 8px; word-break: break-all; }
+.leeg { text-align: center; padding: 30px 16px; color: var(--tekst2); }
+.leeg h2 { color: var(--tekst); }
+
+nav {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; background: #fff; border-top: 1px solid var(--lijn);
+  padding: 6px 12px calc(10px + env(safe-area-inset-bottom, 0px));
+}
+nav .tabs { max-width: 720px; margin: 0 auto; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+nav button {
+  min-height: 52px; border: 0; background: none; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  font-size: 13px; color: var(--grijs);
+}
+nav button[aria-current="page"] { color: var(--accent); font-weight: 700; }
+.toast {
+  position: fixed; left: 50%; bottom: calc(86px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
+  background: var(--ink); color: var(--grond); padding: 10px 16px; border-radius: 12px; font-size: 14px; max-width: 92vw; z-index: 9;
+  display: none;
+}
+.toast.aan { display: block; }
+[hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header id="kop"></header>
+  <main id="inhoud"></main>
+</div>
+<nav aria-label="Onderdelen">
+  <div class="tabs">
+    <button data-tab="overzicht" aria-current="page">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+      Overzicht
+    </button>
+    <button data-tab="vak">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16"/><path d="M4 12h16"/><path d="M4 19h10"/></svg>
+      PTA per vak
+    </button>
+    <button data-tab="instellingen">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+      Instellingen
+    </button>
+  </div>
+</nav>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<input type="file" id="bestand" accept=".json,application/json" hidden>
+
+<script src="model.js"></script>
+<script>
+'use strict';
+/* =====================================================================
+   e-PTA Mobile - alleen-lezen weergave van het Porteum e-PTA-projectbestand.
+   De rekenkern (statussen, controles, kolomnummers) komt uit model.js, dat
+   met werk_model_bij.py letterlijk uit Porteum_e-PTA.html wordt overgenomen.
+   ===================================================================== */
+const LICHT_VERSIE = '1.0';
+const SL = 'epta-mobile.';                 // voorvoegsel voor localStorage-sleutels
+const GRAPH = 'https://graph.microsoft.com/v1.0';
+const SCOPE = 'openid profile offline_access Files.Read.All';
+const VERVERS_NA_MS = 5 * 60 * 1000;      // automatisch verversen als de app langer dan 5 min weg was
+
+/* ---------- kleine hulpjes ---------- */
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const lees = (k, d = null) => { try { const v = localStorage.getItem(SL + k); return v === null ? d : JSON.parse(v); } catch (_) { return d; } };
+const schrijf = (k, v) => { try { if (v === null || v === undefined) localStorage.removeItem(SL + k); else localStorage.setItem(SL + k, JSON.stringify(v)); } catch (_) { } };
+const getal = (n) => typeof n === 'number' ? String(Math.round(n * 100) / 100).replace('.', ',') : '';
+const eerste = (s) => s ? s.charAt(0).toUpperCase() + s.slice(1) : '';
+function tijdTekst(iso) {
+  if (!iso) return '';
+  const d = new Date(iso); if (isNaN(d)) return '';
+  const nu = new Date();
+  const zelfdeDag = d.toDateString() === nu.toDateString();
+  const tijd = d.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+  return zelfdeDag ? `vandaag ${tijd}` : `${d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })} ${tijd}`;
+}
+let toastTimer = null;
+function toast(tekst, ms = 3500) {
+  const t = $('#toast'); t.textContent = tekst; t.classList.add('aan');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('aan'), ms);
+}
+
+/* ---------- IndexedDB: laatst geladen projectbestand bewaren (te groot voor localStorage) ---------- */
+function idb() {
+  return new Promise((res, rej) => {
+    const r = indexedDB.open('epta-mobile', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('kv');
+    r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+  });
+}
+async function cacheLees() {
+  try { const db = await idb(); return await new Promise((res, rej) => { const t = db.transaction('kv').objectStore('kv').get('project'); t.onsuccess = () => res(t.result || null); t.onerror = () => rej(t.error); }); }
+  catch (_) { return null; }
+}
+async function cacheSchrijf(v) {
+  try { const db = await idb(); await new Promise((res, rej) => { const t = db.transaction('kv', 'readwrite').objectStore('kv').put(v, 'project'); t.onsuccess = res; t.onerror = () => rej(t.error); }); }
+  catch (e) { console.warn('cache niet bewaard', e); }
+}
+async function cacheWis() {
+  try { const db = await idb(); await new Promise((res) => { const t = db.transaction('kv', 'readwrite').objectStore('kv').delete('project'); t.onsuccess = res; t.onerror = res; }); } catch (_) { }
+}
+
+/* ---------- toestand ---------- */
+const st = {
+  tab: 'overzicht',
+  project: null, stand: null, validatie: null, kolomnrs: null,
+  meta: null,           // { naam, bron: 'microsoft'|'bestand', gewijzigd (bestand), bewerktDoor, geladenOp }
+  bezig: false, fout: '',
+  alleenOpen: lees('alleenOpen', false),
+  dicht: new Set(lees('dicht', [])),
+  keuze: lees('keuze', { studie: '', vak: '' }),
+  uitgeklapt: new Set(),
+  verborgenOp: 0,
+};
+
+/* ---------- projectbestand verwerken met de rekenkern van e-PTA ---------- */
+function verwerk(tekst, meta) {
+  const p = JSON.parse(tekst);
+  if (!p || !Array.isArray(p.rijen) || !p.instellingen) throw new Error('Dit is geen projectbestand van Porteum e-PTA.');
+  migreer(p);
+  const validatie = valideerProject(p);
+  st.project = p;
+  st.validatie = validatie;
+  st.stand = standVanZaken(p, validatie);
+  st.kolomnrs = berekenKolomnummers(p);
+  st.meta = meta;
+}
+async function laadTekst(tekst, meta, bewaren = true) {
+  verwerk(tekst, meta);
+  if (bewaren) await cacheSchrijf({ tekst, meta });
+  st.fout = '';
+}
+
+/* =====================================================================
+   Microsoft-login (OAuth 2.0 authorization code + PKCE, zonder bibliotheek)
+   De app is een 'single-page application' in Microsoft Entra ID. Er staat geen
+   geheim in de code: client-ID en tenant-ID worden in Instellingen ingevuld.
+   ===================================================================== */
+const redirectUri = () => location.origin + location.pathname;
+const cfg = () => lees('cfg', { tenant: '', client: '' });
+const auth = () => lees('auth', null);
+function b64url(bytes) { let s = ''; bytes.forEach((b) => s += String.fromCharCode(b)); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
+function willekeurig(n) { const a = new Uint8Array(n); crypto.getRandomValues(a); return b64url(a); }
+async function sha256(tekst) { return new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(tekst))); }
+const authBasis = () => `https://login.microsoftonline.com/${encodeURIComponent(cfg().tenant)}/oauth2/v2.0`;
+
+async function inloggen() {
+  const c = cfg();
+  if (!c.tenant || !c.client) { toast('Vul eerst de tenant-ID en client-ID in.'); ga('instellingen'); return; }
+  const verifier = willekeurig(48), state = willekeurig(16);
+  schrijf('pkce', { verifier, state, t: Date.now() });
+  const q = new URLSearchParams({
+    client_id: c.client, response_type: 'code', redirect_uri: redirectUri(), response_mode: 'query',
+    scope: SCOPE, state, code_challenge: b64url(await sha256(verifier)), code_challenge_method: 'S256', prompt: 'select_account',
+  });
+  location.assign(`${authBasis()}/authorize?${q}`);
+}
+async function tokenAanvraag(velden) {
+  const r = await fetch(`${authBasis()}/token`, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams(velden) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error_description ? j.error_description.split('\r\n')[0] : `Inloggen mislukt (${r.status})`);
+  const a = { access: j.access_token, exp: Date.now() + (j.expires_in - 120) * 1000, refresh: j.refresh_token || (auth() || {}).refresh || null };
+  schrijf('auth', a);
+  return a;
+}
+// terugkomst van de Microsoft-inlogpagina afhandelen
+async function verwerkTerugkomst() {
+  const q = new URLSearchParams(location.search);
+  if (!q.has('code') && !q.has('error')) return false;
+  history.replaceState(null, '', redirectUri());
+  const pk = lees('pkce'); schrijf('pkce', null);
+  if (q.has('error')) { st.fout = `Inloggen afgebroken: ${q.get('error_description') || q.get('error')}`; return true; }
+  if (!pk || pk.state !== q.get('state')) { st.fout = 'Inloggen mislukt: de controlecode klopt niet. Probeer het opnieuw.'; return true; }
+  try {
+    await tokenAanvraag({ client_id: cfg().client, grant_type: 'authorization_code', code: q.get('code'), redirect_uri: redirectUri(), code_verifier: pk.verifier, scope: SCOPE });
+    toast('Ingelogd bij Microsoft');
+  } catch (e) { st.fout = e.message; }
+  return true;
+}
+// geldig toegangstoken; vernieuwt stil met het refresh-token, anders opnieuw inloggen
+async function token() {
+  let a = auth();
+  if (a && a.access && a.exp > Date.now()) return a.access;
+  if (a && a.refresh) {
+    try { a = await tokenAanvraag({ client_id: cfg().client, grant_type: 'refresh_token', refresh_token: a.refresh, scope: SCOPE }); return a.access; }
+    catch (_) { schrijf('auth', null); }
+  }
+  throw Object.assign(new Error('Opnieuw inloggen nodig'), { login: true });
+}
+async function graph(pad) {
+  const r = await fetch(GRAPH + pad, { headers: { Authorization: 'Bearer ' + await token() } });
+  if (r.status === 401) { schrijf('auth', { ...(auth() || {}), access: null, exp: 0 }); throw Object.assign(new Error('Opnieuw inloggen nodig'), { login: true }); }
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    const m = (j.error && j.error.message) || `fout ${r.status}`;
+    if (r.status === 403) throw new Error(`Geen toegang tot het bestand (${m}). Heeft jouw account leesrechten in de Teams-omgeving?`);
+    if (r.status === 404) throw new Error('Bestand niet gevonden. Is het verplaatst of hernoemd? Koppel het opnieuw met een nieuwe link.');
+    throw new Error(m);
+  }
+  return j;
+}
+function deelId(link) {
+  const b = btoa(unescape(encodeURIComponent(link.trim()))).replace(/=+$/, '').replace(/\//g, '_').replace(/\+/g, '-');
+  return 'u!' + b;
+}
+async function koppelBestand(link) {
+  if (!/^https:\/\/[^/]+\.sharepoint\.com\//i.test(link.trim())) throw new Error('Plak een link die met https://…sharepoint.com begint (in Teams: … bij het bestand › Koppeling kopiëren).');
+  const it = await graph(`/shares/${deelId(link)}/driveItem?$select=id,name,parentReference`);
+  schrijf('bestand', { drive: it.parentReference.driveId, item: it.id, naam: it.name });
+  return it.name;
+}
+// het projectbestand ophalen; slaat de download over als het bestand niet gewijzigd is
+async function haalOp(forceer = false) {
+  const b = lees('bestand');
+  if (!b) throw new Error('Er is nog geen bestand gekoppeld.');
+  const it = await graph(`/drives/${b.drive}/items/${b.item}?$select=id,name,lastModifiedDateTime,lastModifiedBy,@microsoft.graph.downloadUrl`);
+  const gewijzigd = it.lastModifiedDateTime;
+  const door = (it.lastModifiedBy && it.lastModifiedBy.user && it.lastModifiedBy.user.displayName) || '';
+  if (!forceer && st.meta && st.meta.bron === 'microsoft' && st.meta.gewijzigd === gewijzigd) {
+    st.meta.geladenOp = new Date().toISOString(); await cacheSchrijf({ tekst: (await cacheLees() || {}).tekst, meta: st.meta });
+    return false;
+  }
+  const url = it['@microsoft.graph.downloadUrl'];
+  const r = url ? await fetch(url) : await fetch(`${GRAPH}/drives/${b.drive}/items/${b.item}/content`, { headers: { Authorization: 'Bearer ' + await token() } });
+  if (!r.ok) throw new Error(`Downloaden mislukt (${r.status})`);
+  const tekst = await r.text();
+  await laadTekst(tekst, { naam: it.name, bron: 'microsoft', gewijzigd, bewerktDoor: door, geladenOp: new Date().toISOString() });
+  return true;
+}
+async function ververs(forceer = false) {
+  if (st.bezig) return;
+  if (!lees('bestand')) { if (!st.project) ga('instellingen'); else toast('Er is geen Microsoft-bestand gekoppeld; open een nieuw bestand via Instellingen.'); return; }
+  if (!navigator.onLine) { toast('Geen internet: je ziet de laatst opgehaalde stand.'); return; }
+  st.bezig = true; tekenKop();
+  try {
+    const nieuw = await haalOp(forceer);
+    st.fout = '';
+    toast(nieuw ? 'Nieuwste stand opgehaald' : 'Je had de nieuwste stand al');
+  } catch (e) {
+    if (e.login) { st.bezig = false; tekenKop(); st.fout = 'Je Microsoft-sessie is verlopen.'; teken(); vraagInloggen(); return; }
+    st.fout = e.message; toast(e.message, 6000);
+  } finally { st.bezig = false; teken(); }
+}
+function vraagInloggen() {
+  if (confirm('Opnieuw inloggen bij Microsoft om de nieuwste stand op te halen?')) inloggen();
+}
+
+/* =====================================================================
+   Weergave
+   ===================================================================== */
+const ICOON_VERVERS = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></svg>';
+function statusLabel(code) { return eerste((typeof STATUS_V3_LABEL !== 'undefined' && STATUS_V3_LABEL[code]) || code); }
+function pil(code) { return `<span class="pil st-${esc(code)}">${esc(statusLabel(code))}</span>`; }
+function vakNaamVan(vak) { const p = st.project; return (p.vaknamen && (p.vaknamen[vak] || p.vaknamen[normVak(vak)])) || vak; }
+function studieVolgorde() {
+  const p = st.project; const volg = p.instellingen.studies.map((s) => s.code);
+  return Object.values(st.stand.perStudie).sort((a, b) => {
+    const ia = volg.indexOf(a.studie), ib = volg.indexOf(b.studie);
+    return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib) || a.studie.localeCompare(b.studie);
+  });
+}
+const OPEN_STATUS = ['fouten', 'sectie', 'niet'];
+
+function tekenKop() {
+  const k = $('#kop');
+  const p = st.project, m = st.meta;
+  const school = (p && p.instellingen.schoolnaam) || '';
+  const titels = { overzicht: 'Overzicht', vak: 'PTA per vak', instellingen: 'Instellingen' };
+  const sub = p
+    ? `Schooljaar ${esc(p.instellingen.schooljaarTekst || p.instellingen.schooljaar || '')} · ${m && m.bron === 'microsoft' ? `opgehaald ${esc(tijdTekst(m.geladenOp))}` : `bestand van ${esc(tijdTekst(p.gewijzigd))}`}`
+    : 'Nog geen gegevens geladen';
+  let extra = '';
+  if (p && st.tab === 'overzicht') {
+    const s = st.stand;
+    const binnen = s.vakken.filter((x) => x.terug && x.status !== 'nvt').length;
+    extra = `<div class="tellers">
+      <div class="teller"><b>${binnen}</b><span>binnen</span></div>
+      <div class="teller let"><b>${s.actief - binnen}</b><span>nog open</span></div>
+      <div class="teller"><b>${s.tel.fouten}</b><span>met fouten</span></div>
+    </div>`;
+  }
+  if (p && st.tab === 'vak') extra = kiezersHtml();
+  k.innerHTML = `
+    <div class="kop">
+      <div><div class="klein">${esc(school ? school + ' e-PTA Mobile' : 'e-PTA Mobile')}</div><h1>${titels[st.tab]}</h1></div>
+      ${st.tab !== 'instellingen' && lees('bestand') ? `<button class="rond${st.bezig ? ' draait' : ''}" id="btnVervers" aria-label="Nieuwste stand ophalen">${ICOON_VERVERS}</button>` : ''}
+    </div>
+    <div class="sub">${sub}${m && m.bewerktDoor ? ` · laatst bewerkt door ${esc(m.bewerktDoor)}` : ''}</div>
+    ${extra}`;
+  const bv = $('#btnVervers'); if (bv) bv.onclick = () => ververs(true);
+  if (st.tab === 'vak' && p) koppelKiezers();
+}
+
+function foutBalk() { return st.fout ? `<div class="melding fout" role="alert">${esc(st.fout)}</div>` : ''; }
+
+function tekenOverzicht() {
+  const studies = studieVolgorde();
+  const zicht = st.alleenOpen ? studies.filter((s) => s.vakken.some((x) => OPEN_STATUS.includes(x.status))) : studies;
+  const kaarten = zicht.map((s) => {
+    const actief = s.vakken.filter((x) => x.status !== 'nvt');
+    const binnen = actief.filter((x) => x.terug).length;
+    const open = s.vakken.filter((x) => OPEN_STATUS.includes(x.status)).sort((a, b) => OPEN_STATUS.indexOf(a.status) - OPEN_STATUS.indexOf(b.status) || vakCompare(a.vak, b.vak));
+    const pct = actief.length ? Math.round(binnen / actief.length * 100) : 100;
+    const telling = binnen === actief.length ? `Alle ${actief.length} vakken binnen` : `${binnen} van ${actief.length} vakken binnen`;
+    const verder = [s.klaar ? `${s.klaar} goedgekeurd` : '', s.tel.magister ? `${s.tel.magister} in Magister` : ''].filter(Boolean).join(', ');
+    const dl = deadlineTekst(st.project, s.studie);
+    const isDicht = st.dicht.has(s.studie);
+    return `<section class="kaart studie">
+      <button data-studie="${esc(s.studie)}" aria-expanded="${open.length ? String(!isDicht) : 'false'}">
+        <span class="rij"><span class="naam">${esc(s.studie)}</span><span class="grijs">${dl ? 'retour ' + esc(dl) : ''}</span></span>
+        <span class="balk" aria-hidden="true"><i style="width:${pct}%"></i></span>
+        <span class="rij"><span style="font-size:14px;color:var(--tekst2)">${telling}${verder ? ' · ' + esc(verder) : ''}</span>${open.length ? `<span class="grijs">${isDicht ? 'toon' : 'verberg'}</span>` : ''}</span>
+      </button>
+      ${open.length && !isDicht ? `<div class="open"><h3>Nog niet binnen of met fouten</h3>${open.map((x) => `
+        <button class="vakregel" data-ga-vak="${esc(x.studie)}|${esc(x.vak)}">
+          <span><span class="code">${esc(x.vak)}</span> ${esc(eerste(vakNaamVan(x.vak)))}</span>${pil(x.status)}
+        </button>`).join('')}</div>` : ''}
+    </section>`;
+  }).join('');
+  $('#inhoud').innerHTML = `${foutBalk()}
+    <div class="chips" role="group" aria-label="Filter">
+      <button class="chip" data-filter="alle" aria-pressed="${!st.alleenOpen}">Alle studies</button>
+      <button class="chip" data-filter="open" aria-pressed="${st.alleenOpen}">Alleen open</button>
+    </div>
+    ${kaarten || `<div class="leeg">Alle vakken van alle studies zijn binnen.</div>`}`;
+  document.querySelectorAll('[data-filter]').forEach((b) => b.onclick = () => { st.alleenOpen = b.dataset.filter === 'open'; schrijf('alleenOpen', st.alleenOpen); tekenOverzicht(); });
+  document.querySelectorAll('[data-studie]').forEach((b) => b.onclick = () => {
+    const s = b.dataset.studie; st.dicht.has(s) ? st.dicht.delete(s) : st.dicht.add(s); schrijf('dicht', [...st.dicht]); tekenOverzicht();
+  });
+  document.querySelectorAll('[data-ga-vak]').forEach((b) => b.onclick = () => {
+    const [studie, vak] = b.dataset.gaVak.split('|'); zetKeuze(studie, vak); ga('vak');
+  });
+}
+
+/* ---------- PTA per vak ---------- */
+function vakkenVan(studie) { return st.stand.vakken.filter((x) => x.studie === studie).sort((a, b) => vakCompare(a.vak, b.vak)); }
+function zetKeuze(studie, vak) { st.keuze = { studie, vak }; schrijf('keuze', st.keuze); st.uitgeklapt.clear(); }
+function geldigeKeuze() {
+  const studies = studieVolgorde().map((s) => s.studie);
+  let { studie, vak } = st.keuze;
+  if (!studies.includes(studie)) studie = studies[0] || '';
+  const vakken = vakkenVan(studie).map((x) => x.vak);
+  if (!vakken.includes(vak)) vak = vakken[0] || '';
+  st.keuze = { studie, vak };
+  return st.keuze;
+}
+function kiezersHtml() {
+  const { studie, vak } = geldigeKeuze();
+  const so = studieVolgorde().map((s) => `<option${s.studie === studie ? ' selected' : ''}>${esc(s.studie)}</option>`).join('');
+  const vo = vakkenVan(studie).map((x) => `<option value="${esc(x.vak)}"${x.vak === vak ? ' selected' : ''}>${esc(x.vak)} · ${esc(vakNaamVan(x.vak))}</option>`).join('');
+  return `<div class="kiezers">
+    <label>Studie<select id="kiesStudie">${so}</select></label>
+    <label>Vak<select id="kiesVak">${vo}</select></label>
+  </div>`;
+}
+function koppelKiezers() {
+  $('#kiesStudie').onchange = (e) => { zetKeuze(e.target.value, ''); teken(); };
+  $('#kiesVak').onchange = (e) => { zetKeuze(st.keuze.studie, e.target.value); tekenVak(); window.scrollTo(0, 0); };
+}
+function vormCode(r) {
+  const m = mapToetsvorm(st.project, r.toetsvorm);
+  return kolomkopVoor(st.project, m && m.waarde) || r.toetsvorm || '';
+}
+function tekenVak() {
+  const p = st.project;
+  const { studie, vak } = geldigeKeuze();
+  if (!studie || !vak) { $('#inhoud').innerHTML = `<div class="leeg">Geen vakken gevonden.</div>`; return; }
+  const key = `${studie}|${vak}`;
+  const info = studieInfo(p, studie) || {};
+  const examen = !!info.examenjaar, vmbo = !!info.vmboFilter;
+  const status = vakStatus(p, key, st.validatie.perVak[key]);
+  const stat = st.validatie.perVak[key] || { somSE: 0, somJaar: 0 };
+  const rijen = sorteerRijen(p.rijen.filter((r) => r.studie === studie && r.vak === vak));
+  const pct = examen && !vmbo ? '%' : '';
+  const samen = examen
+    ? `${rijen.length} ${rijen.length === 1 ? 'toets' : 'toetsen'} · SE-weging totaal ${getal(stat.somSE) || 0}${pct}`
+    : `${rijen.length} ${rijen.length === 1 ? 'toets' : 'toetsen'} · weging jaar ${getal(stat.somJaar) || 0} · SE ${getal(stat.somSE) || 0}`;
+  // foutmeldingen per regel verzamelen (zoals e-PTA ze bij Controleren toont)
+  const fouten = [];
+  for (const r of rijen) { const v = st.validatie.perRij.get(r); if (v && v.fouten && v.fouten.length) v.fouten.forEach((f) => fouten.push(`${r.omschrijving || '(zonder omschrijving)'}: ${f}`)); }
+  (stat.meldingen || []).forEach((m) => fouten.push(typeof m === 'string' ? m : (m.tekst || JSON.stringify(m))));
+  const vi = (p.vakken[key] || {});
+  const kaarten = rijen.map((r, i) => {
+    const id = r.id || `${key}#${i}`;
+    const open = st.uitgeklapt.has(id);
+    const kol = (st.kolomnrs && st.kolomnrs.get(r)) || r.kolomnr || '';
+    const wse = typeof r.wse === 'number' ? r.wse : null, wfac = typeof r.wfac === 'number' ? r.wfac : null;
+    const weging = examen
+      ? `${wse !== null ? getal(wse) + pct : '–'}`
+      : `${wfac !== null ? 'jaar ' + getal(wfac) : 'jaar –'}${r.pta ? `<small>SE ${wse !== null ? getal(wse) : '–'}</small>` : ''}`;
+    const duur = String(r.tijdsduur ?? '').trim();
+    const details = [
+      duur ? (/^\d+$/.test(duur) ? `${duur} min` : duur) : '',
+      String(r.afname ?? '').trim(),
+      r.herk ? 'herkansbaar' : 'niet herkansbaar',
+    ].filter(Boolean).join(' · ');
+    const rv = st.validatie.perRij.get(r);
+    const heeftFout = rv && rv.fouten && rv.fouten.length;
+    const leerstof = Kern.zonderOpmaak(r.uitleg || '').trim();
+    return `<section class="kaart toets${r.vervallen ? ' vervalt' : ''}">
+      <button data-toets="${esc(id)}" aria-expanded="${open}">
+        <span class="rij" style="align-items:center">
+          <span class="labels">
+            ${kol ? `<span class="code">${esc(kol)}</span>` : ''}
+            <span class="lab">${esc(r.periode || '?')}</span>
+            ${vormCode(r) ? `<span class="lab rand">${esc(vormCode(r))}</span>` : ''}
+            ${!examen && r.pta ? '<span class="lab rand">PTA</span>' : ''}
+            ${r.vervallen ? '<span class="lab rand">vervalt</span>' : ''}
+            ${heeftFout ? '<span class="lab let">fout</span>' : ''}
+          </span>
+          <span class="weging">${weging}</span>
+        </span>
+        <span class="oms">${esc(Kern.zonderOpmaak(r.omschrijving) || '(zonder omschrijving)')}</span>
+        <span class="grijs" style="font-size:13px">${esc(details)}</span>
+      </button>
+      ${open ? `<div class="meer">
+        ${leerstof ? `<div><dt>Leerstof / inhoud</dt><dd class="tekst">${esc(leerstof)}</dd></div>` : ''}
+        ${r.eindtermen ? `<div><dt>Eindtermen</dt><dd>${esc(Kern.zonderOpmaak(r.eindtermen))}</dd></div>` : ''}
+        ${r.hulpmiddelen ? `<div><dt>Toegestane hulpmiddelen</dt><dd>${esc(Kern.zonderOpmaak(r.hulpmiddelen))}</dd></div>` : ''}
+        ${heeftFout ? `<div class="melding fout">${rv.fouten.map(esc).join('<br>')}</div>` : ''}
+        ${!leerstof && !r.eindtermen && !r.hulpmiddelen && !heeftFout ? '<div class="grijs">Geen verdere gegevens bij deze toets.</div>' : ''}
+      </div>` : ''}
+    </section>`;
+  }).join('');
+  $('#inhoud').innerHTML = `${foutBalk()}
+    <div class="vakkop">
+      <div><h2>${esc(eerste(vakNaamVan(vak)))} · ${esc(studie)}</h2><div class="grijs">${samen}</div></div>
+      ${pil(status.code)}
+    </div>
+    ${status.datum ? `<div class="grijs" style="font-size:13px">${esc(statusLabel(status.code))} sinds ${esc(tijdTekst(status.datum))}${vi.inleiding ? ' · vakinleiding aanwezig' : ' · nog geen vakinleiding'}</div>` : ''}
+    ${fouten.length ? `<div class="melding fout" role="alert"><b>${fouten.length} ${fouten.length === 1 ? 'fout' : 'fouten'} bij dit vak</b><ul>${fouten.slice(0, 8).map((f) => `<li>${esc(f)}</li>`).join('')}</ul>${fouten.length > 8 ? `<div>en nog ${fouten.length - 8}…</div>` : ''}</div>` : ''}
+    ${kaarten || '<div class="leeg">Dit vak heeft geen toetsen.</div>'}`;
+  document.querySelectorAll('[data-toets]').forEach((b) => b.onclick = () => {
+    const id = b.dataset.toets; st.uitgeklapt.has(id) ? st.uitgeklapt.delete(id) : st.uitgeklapt.add(id); tekenVak();
+  });
+}
+
+/* ---------- Instellingen ---------- */
+function tekenInstellingen() {
+  const c = cfg(), b = lees('bestand'), a = auth(), m = st.meta;
+  const ingelogd = !!(a && (a.refresh || (a.access && a.exp > Date.now())));
+  $('#inhoud').innerHTML = `${foutBalk()}
+    <section class="kaart vak">
+      <h2>Gegevens op deze telefoon</h2>
+      ${m ? `<p>${esc(m.naam || 'projectbestand')} · ${m.bron === 'microsoft' ? 'uit Microsoft' : 'handmatig geopend'}${m.gewijzigd ? ` · gewijzigd ${esc(tijdTekst(m.gewijzigd))}` : ''}${m.geladenOp ? ` · opgehaald ${esc(tijdTekst(m.geladenOp))}` : ''}</p>` : '<p>Er zijn nog geen gegevens geladen.</p>'}
+      <p>De app leest alleen. Wijzigingen doe je in Porteum e-PTA op de pc.</p>
+    </section>
+
+    <section class="kaart vak">
+      <h2>1. Microsoft-koppeling</h2>
+      <p>Eenmalig invullen met de gegevens van de app-registratie in Microsoft Entra ID.</p>
+      <label class="veld">Tenant-ID (Directory-ID)<input id="inTenant" value="${esc(c.tenant)}" autocomplete="off" spellcheck="false" inputmode="text"></label>
+      <label class="veld">Client-ID (Application-ID)<input id="inClient" value="${esc(c.client)}" autocomplete="off" spellcheck="false" inputmode="text"></label>
+      <div class="veld">Omleidings-URI om in Entra te registreren (type: single-page application)<div class="url">${esc(redirectUri())}</div></div>
+      <div class="knoppen">
+        <button class="knop" id="btnBewaarCfg">Opslaan en inloggen</button>
+        ${ingelogd ? '<button class="knop licht" id="btnUitlog">Uitloggen</button>' : ''}
+      </div>
+      <p>${ingelogd ? 'Je bent ingelogd.' : 'Je bent nog niet ingelogd.'}</p>
+    </section>
+
+    <section class="kaart vak">
+      <h2>2. Projectbestand koppelen</h2>
+      ${b ? `<p>Gekoppeld: <b>${esc(b.naam)}</b></p>` : '<p>Kopieer in Teams (of SharePoint) de link van het projectbestand: … bij het bestand › Koppeling kopiëren. Plak die hieronder.</p>'}
+      <label class="veld">Link naar het projectbestand<input id="inLink" placeholder="https://…sharepoint.com/…" autocomplete="off" spellcheck="false" inputmode="url"></label>
+      <div class="knoppen">
+        <button class="knop" id="btnKoppel">${b ? 'Ander bestand koppelen' : 'Koppelen en ophalen'}</button>
+        ${b ? '<button class="knop licht" id="btnOntkoppel">Ontkoppelen</button>' : ''}
+      </div>
+    </section>
+
+    <section class="kaart vak">
+      <h2>Of: bestand handmatig openen</h2>
+      <p>Handig om te testen. Je ziet dan een momentopname die niet vanzelf ververst.</p>
+      <div class="knoppen"><button class="knop licht" id="btnOpen">Projectbestand openen…</button></div>
+    </section>
+
+    <section class="kaart vak">
+      <h2>Opruimen</h2>
+      <div class="knoppen"><button class="knop licht" id="btnWis">Alles van deze telefoon wissen</button></div>
+      <p class="grijs">e-PTA Mobile ${LICHT_VERSIE} · rekenkern uit e-PTA ${esc(typeof VERSIE !== 'undefined' ? VERSIE : '?')}</p>
+    </section>`;
+
+  $('#btnBewaarCfg').onclick = () => {
+    const tenant = $('#inTenant').value.trim(), client = $('#inClient').value.trim();
+    const guid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!guid.test(client)) { toast('De client-ID ziet er niet goed uit (verwacht: 8-4-4-4-12 tekens).'); return; }
+    if (!tenant) { toast('Vul de tenant-ID in.'); return; }
+    const oud = cfg(); schrijf('cfg', { tenant, client });
+    if (oud.tenant !== tenant || oud.client !== client) schrijf('auth', null);
+    inloggen();
+  };
+  const uit = $('#btnUitlog'); if (uit) uit.onclick = () => { schrijf('auth', null); toast('Uitgelogd'); tekenInstellingen(); };
+  $('#btnKoppel').onclick = async () => {
+    const link = $('#inLink').value;
+    if (!link.trim()) { toast('Plak eerst de link naar het projectbestand.'); return; }
+    st.bezig = true; tekenKop();
+    try {
+      const naam = await koppelBestand(link);
+      toast(`Gekoppeld: ${naam}`);
+      await haalOp(true); st.fout = ''; ga('overzicht');
+    } catch (e) {
+      if (e.login) { schrijf('wachtLink', link); vraagInloggen(); } else { st.fout = e.message; tekenInstellingen(); }
+    } finally { st.bezig = false; tekenKop(); }
+  };
+  const ont = $('#btnOntkoppel'); if (ont) ont.onclick = () => { schrijf('bestand', null); toast('Bestand ontkoppeld'); teken(); };
+  $('#btnOpen').onclick = () => $('#bestand').click();
+  $('#btnWis').onclick = async () => {
+    if (!confirm('Alle gegevens, de koppeling en de inlog van deze telefoon wissen?')) return;
+    ['cfg', 'auth', 'bestand', 'pkce', 'keuze', 'dicht', 'alleenOpen', 'wachtLink'].forEach((k) => schrijf(k, null));
+    await cacheWis();
+    Object.assign(st, { project: null, stand: null, validatie: null, kolomnrs: null, meta: null, fout: '' });
+    toast('Alles gewist'); teken();
+  };
+}
+
+$('#bestand').onchange = async (e) => {
+  const f = e.target.files && e.target.files[0]; e.target.value = '';
+  if (!f) return;
+  try {
+    await laadTekst(await f.text(), { naam: f.name, bron: 'bestand', gewijzigd: '', bewerktDoor: '', geladenOp: new Date().toISOString() });
+    toast(`Geopend: ${f.name}`); ga('overzicht');
+  } catch (err) { st.fout = `Openen mislukt: ${err.message}`; teken(); }
+};
+
+function tekenWelkom() {
+  $('#inhoud').innerHTML = `${foutBalk()}<div class="leeg">
+    <h2>Nog geen gegevens</h2>
+    <p>Koppel het projectbestand van Porteum e-PTA in Instellingen, of open een bestand om te testen.</p>
+    <div class="knoppen" style="justify-content:center"><button class="knop" id="btnNaarInst">Naar instellingen</button></div>
+  </div>`;
+  $('#btnNaarInst').onclick = () => ga('instellingen');
+}
+
+function teken() {
+  document.querySelectorAll('nav [data-tab]').forEach((b) => b.setAttribute('aria-current', b.dataset.tab === st.tab ? 'page' : 'false'));
+  tekenKop();
+  if (st.tab === 'instellingen') return tekenInstellingen();
+  if (!st.project) return tekenWelkom();
+  if (st.tab === 'vak') return tekenVak();
+  tekenOverzicht();
+}
+function ga(tab) { st.tab = tab; teken(); window.scrollTo(0, 0); }
+document.querySelectorAll('nav [data-tab]').forEach((b) => b.onclick = () => ga(b.dataset.tab));
+
+// automatisch verversen als de app weer in beeld komt na een tijdje weg
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { st.verborgenOp = Date.now(); return; }
+  if (st.verborgenOp && Date.now() - st.verborgenOp > VERVERS_NA_MS && lees('bestand') && auth()) ververs(false);
+});
+
+/* ---------- start ---------- */
+(async function start() {
+  const terug = await verwerkTerugkomst();
+  const c = await cacheLees();
+  if (c && c.tekst) { try { verwerk(c.tekst, c.meta); } catch (e) { st.fout = `Opgeslagen gegevens onleesbaar: ${e.message}`; } }
+  teken();
+  const wacht = lees('wachtLink');
+  if (terug && wacht && auth()) {
+    schrijf('wachtLink', null);
+    try { const naam = await koppelBestand(wacht); toast(`Gekoppeld: ${naam}`); } catch (e) { st.fout = e.message; ga('instellingen'); return; }
+  }
+  if (lees('bestand') && auth() && navigator.onLine) ververs(terug);
+  else if (terug && !lees('bestand')) ga('instellingen');
+  if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => { });
+})();
+</script>
+</body>
+</html>
