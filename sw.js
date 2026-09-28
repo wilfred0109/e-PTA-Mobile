@@ -1,6 +1,6 @@
 /* e-PTA Mobile service worker: bewaart alleen de app zelf, nooit gegevens of inlogverkeer.
    Verhoog VERSIE bij elke nieuwe uitgave, dan halen telefoons de nieuwe bestanden op. */
-const VERSIE = 'epta-mobile-1.2';
+const VERSIE = 'epta-mobile-1.3';
 const SCHIL = ['./', './index.html', './model.js', './manifest.webmanifest', './icon-192.png', './icon-512.png', './icon-maskable-512.png'];
 
 self.addEventListener('install', (e) => {

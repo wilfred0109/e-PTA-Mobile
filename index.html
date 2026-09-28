@@ -182,7 +182,7 @@ mark { background: #F5D9A8; color: inherit; border-radius: 3px; padding: 0 1px; 
    De rekenkern (statussen, controles, kolomnummers) komt uit model.js, dat
    met werk_model_bij.py letterlijk uit Porteum_e-PTA.html wordt overgenomen.
    ===================================================================== */
-const LICHT_VERSIE = '1.2';
+const LICHT_VERSIE = '1.3';
 const SL = 'epta-mobile.';                 // voorvoegsel voor localStorage-sleutels
 const GRAPH = 'https://graph.microsoft.com/v1.0';
 const SCOPE = 'openid profile offline_access Files.Read.All';
@@ -511,12 +511,13 @@ function tekenVak() {
   const info = studieInfo(p, studie) || {};
   const examen = !!info.examenjaar, vmbo = !!info.vmboFilter;
   const status = vakStatus(p, key, st.validatie.perVak[key]);
-  const stat = st.validatie.perVak[key] || { somSE: 0, somJaar: 0 };
+  const stat = st.validatie.perVak[key] || { somSE: 0, somSEP0: 0, somJaar: 0 };
+  const somSE = (stat.somSE || 0) + (stat.somSEP0 || 0);   // zoals e-PTA: P0 (vorig leerjaar) telt mee
   const rijen = sorteerRijen(p.rijen.filter((r) => r.studie === studie && r.vak === vak));
   const pct = examen && !vmbo ? '%' : '';
   const samen = examen
-    ? `${rijen.length} ${rijen.length === 1 ? 'toets' : 'toetsen'} · SE-weging totaal ${getal(stat.somSE) || 0}${pct}`
-    : `${rijen.length} ${rijen.length === 1 ? 'toets' : 'toetsen'} · weging jaar ${getal(stat.somJaar) || 0} · SE ${getal(stat.somSE) || 0}`;
+    ? `${rijen.length} ${rijen.length === 1 ? 'toets' : 'toetsen'} · SE-weging totaal ${getal(somSE) || 0}${pct}`
+    : `${rijen.length} ${rijen.length === 1 ? 'toets' : 'toetsen'} · weging jaar ${getal(stat.somJaar) || 0} · SE ${getal(somSE) || 0}`;
   // foutmeldingen per regel verzamelen (zoals e-PTA ze bij Controleren toont)
   const fouten = [];
   for (const r of rijen) { const v = st.validatie.perRij.get(r); if (v && v.fouten && v.fouten.length) v.fouten.forEach((f) => fouten.push(`${r.omschrijving || '(zonder omschrijving)'}: ${f}`)); }
@@ -722,7 +723,11 @@ document.addEventListener('visibilitychange', () => {
 /* ---------- PTA van een vak delen als boekjespagina (afbeelding) ---------- */
 const BOEK_KLEUR = { ink: '#1B2430', grond: '#F4F2EC', kaart: '#FFFFFF', lijn: '#E4E0D6', balk: '#E9E5DB', tekst: '#1B2430', tekst2: '#3A4652', grijs: '#5B6570', accent: '#0B5E5E', oranje: '#F5B971', zacht: '#C8D3DC', kop: '#9FB3C2' };
 const BOEK_FONT = '"Segoe UI", system-ui, -apple-system, "Noto Sans", Roboto, sans-serif';
-function periodeTitel(pr) { const m = String(pr || '').match(/^p(\d+)$/i); return m ? `Periode ${m[1]}` : (pr || 'Overig'); }
+function periodeTitel(pr) {
+  if (pr === 'P0') return 'Vorig leerjaar (P0)';
+  if (pr === 'AFSE') return 'Afsluitend schoolexamen';
+  const m = String(pr || '').match(/^p(\d+)$/i); return m ? `Periode ${m[1]}` : (pr || 'Overig');
+}
 // tekst over meerdere regels verdelen binnen een breedte
 function breek(ctx, tekst, breedte, maxRegels = 99) {
   const woorden = String(tekst || '').replace(/\s+/g, ' ').trim().split(' ');
@@ -814,7 +819,8 @@ function maakBoekjePagina(studie, vak, rijen, examen, vmbo) {
   const stat = st.validatie.perVak[`${studie}|${vak}`] || {};
   ctx.fillStyle = K.lijn; ctx.fillRect(M, y + 20, KB, 3);
   ctx.fillStyle = K.tekst2; ctx.font = f(700, 30);
-  ctx.fillText(examen ? `Totaal SE-weging: ${getal(stat.somSE) || 0}${pct}` : `Totaal weging jaar: ${getal(stat.somJaar) || 0}${stat.somSE ? `  ·  SE: ${getal(stat.somSE)}` : ''}`, M, y + 76);
+  const somSE = (stat.somSE || 0) + (stat.somSEP0 || 0);
+  ctx.fillText(examen ? `Totaal SE-weging: ${getal(somSE) || 0}${pct}` : `Totaal weging jaar: ${getal(stat.somJaar) || 0}${somSE ? `  ·  SE: ${getal(somSE)}` : ''}`, M, y + 76);
   ctx.fillStyle = K.grijs; ctx.font = f(400, 24);
   breek(ctx, `Stand ${new Date(p.gewijzigd || Date.now()).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })} · aan dit overzicht kunnen geen rechten worden ontleend`, KB, 2)
     .forEach((t, i) => ctx.fillText(t, M, y + 118 + i * 32));
