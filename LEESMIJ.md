@@ -3,7 +3,7 @@
 Een web-app (PWA) voor de telefoon die het projectbestand van Porteum e-PTA **alleen leest**:
 
 - **Overzicht**: per studie hoeveel vakken binnen zijn, de retourdatum, en welke vakken nog bij de sectie liggen, nog niet zijn uitgezet of fouten hebben.
-- **PTA per vak**: studie en vak kiezen, de status van het vak, eventuele fouten en per toets het kolomnummer, de periode, de toetsvorm, de weging, duur, afnamemoment en herkansbaarheid. Tik op een toets voor leerstof, eindtermen en hulpmiddelen. Daaronder de vakinleiding en studie-inleiding, en een knop om het PTA van het vak te delen (WhatsApp, mail).
+- **PTA per vak**: studie en vak kiezen, de status van het vak, eventuele fouten en per toets het kolomnummer, de periode, de toetsvorm, de weging, duur, afnamemoment en herkansbaarheid. Tik op een toets voor leerstof, eindtermen en hulpmiddelen. Daaronder de vakinleiding en studie-inleiding, en een knop om het PTA van het vak te delen (als opgemaakte boekjespagina, bijvoorbeeld naar WhatsApp).
 - **Toetsweken**: alle toetsen van één afnamemoment in een studie, per dag als ze in het toetsrooster zijn ingepland. Schrijfwijzen als TW1, tw 1 en Toetsweek 1 worden samengenomen.
 - **Zoeken**: in omschrijving, leerstof, eindtermen en hulpmiddelen van alle toetsen, ook op vakcode, kolomnummer of afnamemoment.
 - **Logboek** (onder Meer): wie wat wanneer heeft gewijzigd, te filteren op studie en soort. Tik op een wijziging om de toets te openen.

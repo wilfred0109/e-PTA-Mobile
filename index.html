@@ -182,7 +182,7 @@ mark { background: #F5D9A8; color: inherit; border-radius: 3px; padding: 0 1px; 
    De rekenkern (statussen, controles, kolomnummers) komt uit model.js, dat
    met werk_model_bij.py letterlijk uit Porteum_e-PTA.html wordt overgenomen.
    ===================================================================== */
-const LICHT_VERSIE = '1.1';
+const LICHT_VERSIE = '1.2';
 const SL = 'epta-mobile.';                 // voorvoegsel voor localStorage-sleutels
 const GRAPH = 'https://graph.microsoft.com/v1.0';
 const SCOPE = 'openid profile offline_access Files.Read.All';
@@ -719,23 +719,122 @@ document.addEventListener('visibilitychange', () => {
 });
 
 
-/* ---------- PTA van een vak delen ---------- */
-async function deelVak(studie, vak, rijen, examen, vmbo) {
-  const p = st.project, pct = examen && !vmbo ? '%' : '';
-  const kop = `PTA ${eerste(vakNaamVan(vak))} – ${studie} (schooljaar ${p.instellingen.schooljaarTekst || p.instellingen.schooljaar || ''})`;
-  const regels = rijen.filter((r) => !r.vervallen).map((r) => {
-    const kol = (st.kolomnrs && st.kolomnrs.get(r)) || r.kolomnr || '';
-    const w = examen ? (typeof r.wse === 'number' ? `SE ${getal(r.wse)}${pct}` : '') : [typeof r.wfac === 'number' ? `weging ${getal(r.wfac)}` : '', r.pta && typeof r.wse === 'number' ? `SE ${getal(r.wse)}` : ''].filter(Boolean).join(', ');
+/* ---------- PTA van een vak delen als boekjespagina (afbeelding) ---------- */
+const BOEK_KLEUR = { ink: '#1B2430', grond: '#F4F2EC', kaart: '#FFFFFF', lijn: '#E4E0D6', balk: '#E9E5DB', tekst: '#1B2430', tekst2: '#3A4652', grijs: '#5B6570', accent: '#0B5E5E', oranje: '#F5B971', zacht: '#C8D3DC', kop: '#9FB3C2' };
+const BOEK_FONT = '"Segoe UI", system-ui, -apple-system, "Noto Sans", Roboto, sans-serif';
+function periodeTitel(pr) { const m = String(pr || '').match(/^p(\d+)$/i); return m ? `Periode ${m[1]}` : (pr || 'Overig'); }
+// tekst over meerdere regels verdelen binnen een breedte
+function breek(ctx, tekst, breedte, maxRegels = 99) {
+  const woorden = String(tekst || '').replace(/\s+/g, ' ').trim().split(' ');
+  const regels = []; let r = '';
+  for (const w of woorden) {
+    const test = r ? r + ' ' + w : w;
+    if (ctx.measureText(test).width <= breedte || !r) r = test; else { regels.push(r); r = w; }
+  }
+  if (r) regels.push(r);
+  if (regels.length > maxRegels) { const k = regels.slice(0, maxRegels); let l = k[maxRegels - 1]; while (l && ctx.measureText(l + '…').width > breedte) l = l.slice(0, -1); k[maxRegels - 1] = l + '…'; return k; }
+  return regels;
+}
+function rondeRect(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+function maakBoekjePagina(studie, vak, rijen, examen, vmbo) {
+  const p = st.project, K = BOEK_KLEUR, pct = examen && !vmbo ? '%' : '';
+  const W = 1080, M = 56, KB = W - 2 * M, BIN = 36;
+  const cv = document.createElement('canvas'); const ctx = cv.getContext('2d');
+  const f = (gewicht, px) => `${gewicht} ${px}px ${BOEK_FONT}`;
+  const toetsen = rijen.filter((r) => !r.vervallen);
+  // groepen per periode, in de volgorde van het PTA
+  const groepen = [];
+  for (const r of toetsen) { const t = periodeTitel(r.periode); let g = groepen[groepen.length - 1]; if (!g || g.titel !== t) groepen.push(g = { titel: t, items: [] }); g.items.push(r); }
+  // eerst alles opmeten
+  const WEEG_B = 170, TEKST_B = KB - 2 * BIN - WEEG_B - 20;
+  const meet = toetsen.map((r) => {
+    ctx.font = f(700, 34); const oms = breek(ctx, Kern.zonderOpmaak(r.omschrijving || '(zonder omschrijving)'), TEKST_B, 3);
     const duur = String(r.tijdsduur ?? '').trim();
-    const det = [duur ? (/^\d+$/.test(duur) ? `${duur} min` : duur) : '', String(r.afname ?? '').trim(), r.herk ? 'herkansbaar' : 'niet herkansbaar'].filter(Boolean).join(' · ');
-    return [[kol, r.periode, vormCode(r), w].filter(Boolean).join(' · '), Kern.zonderOpmaak(r.omschrijving || ''), det].filter(Boolean).join('\n');
+    const det = [duur ? (/^\d+$/.test(duur) ? `${duur} min` : duur) : '', String(r.afname ?? '').trim(), r.herk ? 'herkansbaar' : 'niet herkansbaar'].filter(Boolean).join('  ·  ');
+    ctx.font = f(400, 27); const detR = breek(ctx, det, TEKST_B, 2);
+    return { r, oms, detR, h: 34 + 44 + oms.length * 44 + detR.length * 36 + 30 };
   });
-  const tekst = `${kop}\n\n${regels.join('\n\n')}`;
+  // vaknaam passend maken: zo groot mogelijk, hooguit twee regels
+  let titelPx = 64, titel = [];
+  for (const px of [64, 56, 48, 42]) { ctx.font = f(700, px); titelPx = px; titel = breek(ctx, eerste(vakNaamVan(vak)), KB, 99); if (titel.length <= 2) break; }
+  ctx.font = f(700, titelPx); titel = breek(ctx, eerste(vakNaamVan(vak)), KB, 2);
+  const KOP_H = titel.length > 1 ? 400 : 330, GROEP_H = 84, VOET_H = 200;
+  const H = KOP_H + 40 + groepen.length * GROEP_H + meet.reduce((a, m) => a + m.h + 18, 0) + VOET_H;
+  cv.width = W; cv.height = H;
+  // achtergrond en kop
+  ctx.fillStyle = K.grond; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = K.ink; ctx.fillRect(0, 0, W, KOP_H);
+  ctx.fillStyle = K.oranje; ctx.fillRect(M, 72, 64, 8);
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = K.kop; ctx.font = f(600, 30);
+  ctx.fillText(`${p.instellingen.schoolnaam || ''} · Programma van Toetsing en Afsluiting`.replace(/^ · /, ''), M, 132);
+  ctx.font = f(700, titelPx);
+  ctx.fillStyle = K.grond;
+  titel.forEach((t, i) => ctx.fillText(t, M, 214 + i * Math.round(titelPx * 1.1)));
+  ctx.fillStyle = K.zacht; ctx.font = f(400, 32);
+  ctx.fillText(`${studie} · schooljaar ${p.instellingen.schooljaarTekst || p.instellingen.schooljaar || ''} · ${toetsen.length} ${toetsen.length === 1 ? 'toets' : 'toetsen'}`, M, KOP_H - 48);
+  let y = KOP_H + 40;
+  const perId = new Map(meet.map((m) => [m.r, m]));
+  for (const g of groepen) {
+    ctx.fillStyle = K.accent; ctx.font = f(700, 34); ctx.fillText(g.titel, M, y + 50);
+    ctx.fillStyle = K.lijn; ctx.fillRect(M + ctx.measureText(g.titel).width + 20, y + 38, KB - ctx.measureText(g.titel).width - 20, 3);
+    y += GROEP_H;
+    for (const r of g.items) {
+      const m = perId.get(r);
+      ctx.fillStyle = K.kaart; rondeRect(ctx, M, y, KB, m.h, 22); ctx.fill();
+      ctx.strokeStyle = K.lijn; ctx.lineWidth = 2; ctx.stroke();
+      // labels: kolomnummer en toetsvorm
+      let x = M + BIN; const ly = y + 34;
+      const kol = String((st.kolomnrs && st.kolomnrs.get(r)) || r.kolomnr || '');
+      const vorm = vormCode(r);
+      ctx.font = f(700, 24); ctx.textBaseline = 'middle';
+      for (const [lab, vul] of [[kol, true], [vorm, false]]) {
+        if (!lab) continue;
+        const bw = ctx.measureText(lab).width + 28;
+        rondeRect(ctx, x, ly - 20, bw, 40, 12);
+        if (vul) { ctx.fillStyle = K.balk; ctx.fill(); } else { ctx.strokeStyle = '#B9B3A6'; ctx.lineWidth = 2; ctx.stroke(); }
+        ctx.fillStyle = K.tekst2; ctx.fillText(lab, x + 14, ly + 1); x += bw + 12;
+      }
+      // weging rechts
+      ctx.textAlign = 'right'; ctx.fillStyle = K.accent;
+      const wse = typeof r.wse === 'number' ? r.wse : null, wfac = typeof r.wfac === 'number' ? r.wfac : null;
+      if (examen) { ctx.font = f(700, 48); ctx.fillText(wse !== null ? getal(wse) + pct : '–', M + KB - BIN, ly + 18); ctx.font = f(400, 22); ctx.fillStyle = K.grijs; ctx.fillText('SE-weging', M + KB - BIN, ly + 58); }
+      else { ctx.font = f(700, 44); ctx.fillText(wfac !== null ? '×' + getal(wfac) : '–', M + KB - BIN, ly + 16); ctx.font = f(400, 22); ctx.fillStyle = K.grijs; ctx.fillText(r.pta && wse !== null ? `SE ${getal(wse)}` : 'weging', M + KB - BIN, ly + 56); }
+      ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+      // omschrijving en details
+      let ty = y + 34 + 44 + 26;
+      ctx.fillStyle = K.tekst; ctx.font = f(700, 34);
+      m.oms.forEach((t) => { ctx.fillText(t, M + BIN, ty); ty += 44; });
+      ctx.fillStyle = K.grijs; ctx.font = f(400, 27);
+      m.detR.forEach((t) => { ctx.fillText(t, M + BIN, ty); ty += 36; });
+      y += m.h + 18;
+    }
+  }
+  // voet
+  const stat = st.validatie.perVak[`${studie}|${vak}`] || {};
+  ctx.fillStyle = K.lijn; ctx.fillRect(M, y + 20, KB, 3);
+  ctx.fillStyle = K.tekst2; ctx.font = f(700, 30);
+  ctx.fillText(examen ? `Totaal SE-weging: ${getal(stat.somSE) || 0}${pct}` : `Totaal weging jaar: ${getal(stat.somJaar) || 0}${stat.somSE ? `  ·  SE: ${getal(stat.somSE)}` : ''}`, M, y + 76);
+  ctx.fillStyle = K.grijs; ctx.font = f(400, 24);
+  breek(ctx, `Stand ${new Date(p.gewijzigd || Date.now()).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })} · aan dit overzicht kunnen geen rechten worden ontleend`, KB, 2)
+    .forEach((t, i) => ctx.fillText(t, M, y + 118 + i * 32));
+  return cv;
+}
+async function deelVak(studie, vak, rijen, examen, vmbo) {
+  const titel = `PTA ${eerste(vakNaamVan(vak))} – ${studie}`;
+  toast('Pagina maken…', 1500);
+  const cv = maakBoekjePagina(studie, vak, rijen, examen, vmbo);
+  const blob = await new Promise((res) => cv.toBlob(res, 'image/png'));
+  const naam = `PTA_${studie}_${vak}.png`.replace(/[^\w.-]+/g, '_');
+  const bestand = new File([blob], naam, { type: 'image/png' });
   try {
-    if (navigator.share) { await navigator.share({ title: kop, text: tekst }); return; }
+    if (navigator.canShare && navigator.canShare({ files: [bestand] })) { await navigator.share({ files: [bestand], title: titel }); return; }
   } catch (e) { if (e && e.name === 'AbortError') return; }
-  try { await navigator.clipboard.writeText(tekst); toast('PTA gekopieerd; plak het in WhatsApp of een mail.'); }
-  catch (_) { location.href = `mailto:?subject=${encodeURIComponent(kop)}&body=${encodeURIComponent(tekst)}`; }
+  // geen deelmenu met bestanden: afbeelding downloaden
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = naam; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+  toast('Afbeelding opgeslagen; deel hem vanuit je galerij of downloads.');
 }
 
 /* ---------- Toetsweken: alle toetsen van één afnamemoment in een studie ---------- */
